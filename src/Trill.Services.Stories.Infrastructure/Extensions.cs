@@ -40,7 +40,6 @@ using Trill.Services.Stories.Infrastructure.Clients.HTTP;
 using Trill.Services.Stories.Infrastructure.Contexts;
 using Trill.Services.Stories.Infrastructure.Decorators;
 using Trill.Services.Stories.Infrastructure.Exceptions;
-using Trill.Services.Stories.Infrastructure.Logging;
 using Trill.Services.Stories.Infrastructure.Mongo;
 using Trill.Services.Stories.Infrastructure.Mongo.Documents;
 using Trill.Services.Stories.Infrastructure.Mongo.Repositories;
@@ -57,7 +56,6 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddSingleton<IRequestStorage, RequestStorage>()
                 .AddSingleton<IStoryRequestStorage, StoryRequestStorage>()
                 .AddSingleton<IStoryIdGenerator, StoryIdGenerator>()
-                .AddSingleton<RequestTypeMetricsMiddleware>()
                 .AddSingleton<IDateTimeProvider, DateTimeProvider>()
                 .AddScoped<IMessageBroker, MessageBroker>()
                 .AddScoped<IStoryRepository, StoryMongoRepository>()
@@ -67,20 +65,9 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddTransient<IAppContextFactory, AppContextFactory>()
                 .AddTransient(ctx => ctx.GetRequiredService<IAppContextFactory>().Create())
                 .AddGrpc();
-
-            if (builder.GetOptions<PrometheusOptions>("prometheus").Enabled)
-            {
-                builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(MetricsCommandHandlerDecorator<>));
-            }
             
-            if (builder.GetOptions<JaegerOptions>("jaeger").Enabled)
-            {
-                builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(TracingCommandHandlerDecorator<>));
-            }
-            
-            builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingCommandHandlerDecorator<>));
-            builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(LoggingEventHandlerDecorator<>));
-            
+            // builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingCommandHandlerDecorator<>));
+            // builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(LoggingEventHandlerDecorator<>));
             
             builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(OutboxCommandHandlerDecorator<>));
             builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(OutboxEventHandlerDecorator<>));
@@ -93,7 +80,7 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddHttpClient()
                 .AddConsul()
                 .AddFabio()
-                .AddRabbitMq(plugins: p => p.AddJaegerRabbitMqPlugin())
+                .AddRabbitMq()
                 .AddMessageOutbox(o => o.AddMongo())
                 .AddMongo()
                 .AddRedis()
@@ -105,17 +92,14 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddCertificateAuthentication()
                 .AddSecurity();
              
-             builder.Services.AddScoped<LogContextMiddleware>()
-                 .AddSingleton<ICorrelationIdFactory, CorrelationIdFactory>();
+             builder.Services.AddSingleton<ICorrelationIdFactory, CorrelationIdFactory>();
 
              return builder;
         }
 
         public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder app)
         {
-            app.UseMiddleware<LogContextMiddleware>()
-                .UseMiddleware<RequestTypeMetricsMiddleware>()
-                .UseErrorHandler()
+            app.UseErrorHandler()
                 .UseSwaggerDocs()
                 .UseJaeger()
                 .UseConvey()
