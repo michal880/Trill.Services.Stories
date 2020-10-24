@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Convey.Types;
 using Microsoft.AspNetCore.Http;
 using Prometheus;
 
@@ -6,17 +8,32 @@ namespace Trill.Services.Stories.Infrastructure.Metrics
 {
     internal class RequestTypeMetricsMiddleware : IMiddleware
     {
-        private readonly Counter _requestsCounter;
+        private static readonly ISet<string> IgnoredPaths = new HashSet<string>
+        {
+            "/metrics",
+            "/ping",
+            "/health"
+        };
 
-        public RequestTypeMetricsMiddleware()
+        private readonly Counter _totalRequests;
+        private readonly string _service;
+
+        public RequestTypeMetricsMiddleware(AppOptions appOptions)
         {
-            _requestsCounter = Prometheus.Metrics.CreateCounter("requests_counter", "Number of HTTP requests");
+            _service = appOptions.Service;
+            _totalRequests = Prometheus.Metrics.CreateCounter("total_requests", "Number of HTTP requests.", "method", "service");
         }
-        
-        public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+
+        public Task InvokeAsync(HttpContext context, RequestDelegate next)
         {
-            _requestsCounter.Inc();
-            await next(context);
+            if (IgnoredPaths.Contains(context.Request.Path))
+            {
+                return next(context);
+            }
+
+            _totalRequests.WithLabels(context.Request.Method, _service).Inc();
+
+            return next(context);
         }
     }
 }
