@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Convey.CQRS.Commands;
+using Trill.Services.Stories.Application.Clients;
 using Trill.Services.Stories.Application.Events;
 using Trill.Services.Stories.Application.Exceptions;
 using Trill.Services.Stories.Application.Services;
@@ -19,10 +20,11 @@ namespace Trill.Services.Stories.Application.Commands.Handlers
         private readonly IStoryIdGenerator _storyIdGenerator;
         private readonly IStoryRequestStorage _storyRequestStorage;
         private readonly IMessageBroker _messageBroker;
+        private readonly IUsersApiClient _usersApiClient;
 
         public SendStoryHandler(IUserRepository userRepository, IStoryRepository storyRepository,
             IStoryTextPolicy storyTextPolicy, IDateTimeProvider dateTimeProvider, IStoryIdGenerator storyIdGenerator,
-            IStoryRequestStorage storyRequestStorage, IMessageBroker messageBroker)
+            IStoryRequestStorage storyRequestStorage, IMessageBroker messageBroker, IUsersApiClient usersApiClient)
         {
             _userRepository = userRepository;
             _storyRepository = storyRepository;
@@ -31,10 +33,17 @@ namespace Trill.Services.Stories.Application.Commands.Handlers
             _storyIdGenerator = storyIdGenerator;
             _storyRequestStorage = storyRequestStorage;
             _messageBroker = messageBroker;
+            _usersApiClient = usersApiClient;
         }
 
         public async Task HandleAsync(SendStory command)
         {
+            var userDto = await _usersApiClient.GetAsync(command.UserId);
+            if (userDto is null)
+            {
+                throw new UserNotFoundException(command.UserId);
+            }
+            
             var user = await _userRepository.GetAsync(command.UserId);
             if (user is null)
             {
