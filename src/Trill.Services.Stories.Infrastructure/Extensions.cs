@@ -87,7 +87,7 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddHttpClient()
                 .AddConsul()
                 .AddFabio()
-                .AddRabbitMq()
+                .AddRabbitMq(plugins: p => p.AddJaegerRabbitMqPlugin())
                 .AddMessageOutbox(o => o.AddMongo())
                 .AddMongo()
                 .AddRedis()
