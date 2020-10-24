@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -41,6 +42,7 @@ using Trill.Services.Stories.Infrastructure.Contexts;
 using Trill.Services.Stories.Infrastructure.Decorators;
 using Trill.Services.Stories.Infrastructure.Exceptions;
 using Trill.Services.Stories.Infrastructure.Logging;
+using Trill.Services.Stories.Infrastructure.Metrics;
 using Trill.Services.Stories.Infrastructure.Mongo;
 using Trill.Services.Stories.Infrastructure.Mongo.Documents;
 using Trill.Services.Stories.Infrastructure.Mongo.Repositories;
@@ -55,6 +57,7 @@ namespace Trill.Services.Stories.Infrastructure
         {
             builder.Services
                 .AddScoped<LogContextMiddleware>()
+                .AddSingleton<RequestTypeMetricsMiddleware>()
                 .AddSingleton<IRequestStorage, RequestStorage>()
                 .AddSingleton<IStoryRequestStorage, StoryRequestStorage>()
                 .AddSingleton<IStoryIdGenerator, StoryIdGenerator>()
@@ -102,6 +105,7 @@ namespace Trill.Services.Stories.Infrastructure
         public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder app)
         {
             app.UseMiddleware<LogContextMiddleware>()
+                .UseMiddleware<RequestTypeMetricsMiddleware>()
                 .UseErrorHandler()
                 .UseSwaggerDocs()
                 .UseJaeger()
