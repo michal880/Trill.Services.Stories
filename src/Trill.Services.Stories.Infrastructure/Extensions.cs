@@ -40,6 +40,7 @@ using Trill.Services.Stories.Infrastructure.Clients.HTTP;
 using Trill.Services.Stories.Infrastructure.Contexts;
 using Trill.Services.Stories.Infrastructure.Decorators;
 using Trill.Services.Stories.Infrastructure.Exceptions;
+using Trill.Services.Stories.Infrastructure.Logging;
 using Trill.Services.Stories.Infrastructure.Mongo;
 using Trill.Services.Stories.Infrastructure.Mongo.Documents;
 using Trill.Services.Stories.Infrastructure.Mongo.Repositories;
@@ -53,6 +54,7 @@ namespace Trill.Services.Stories.Infrastructure
         public static IConveyBuilder AddInfrastructure(this IConveyBuilder builder)
         {
             builder.Services
+                .AddScoped<LogContextMiddleware>()
                 .AddSingleton<IRequestStorage, RequestStorage>()
                 .AddSingleton<IStoryRequestStorage, StoryRequestStorage>()
                 .AddSingleton<IStoryIdGenerator, StoryIdGenerator>()
@@ -66,8 +68,8 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddTransient(ctx => ctx.GetRequiredService<IAppContextFactory>().Create())
                 .AddGrpc();
             
-            // builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingCommandHandlerDecorator<>));
-            // builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(LoggingEventHandlerDecorator<>));
+            builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingCommandHandlerDecorator<>));
+            builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(LoggingEventHandlerDecorator<>));
             
             builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(OutboxCommandHandlerDecorator<>));
             builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(OutboxEventHandlerDecorator<>));
@@ -99,7 +101,8 @@ namespace Trill.Services.Stories.Infrastructure
 
         public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder app)
         {
-            app.UseErrorHandler()
+            app.UseMiddleware<LogContextMiddleware>()
+                .UseErrorHandler()
                 .UseSwaggerDocs()
                 .UseJaeger()
                 .UseConvey()

@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
+using Convey;
 using Convey.CQRS.Events;
 using Convey.HTTP;
 using Convey.Types;
+using Microsoft.Extensions.Logging;
 using Serilog.Context;
 
 namespace Trill.Services.Stories.Infrastructure.Decorators
@@ -12,11 +14,14 @@ namespace Trill.Services.Stories.Infrastructure.Decorators
     {
         private readonly IEventHandler<TEvent> _handler;
         private readonly ICorrelationIdFactory _correlationIdFactory;
+        private readonly ILogger<IEventHandler<TEvent>> _logger;
 
-        public LoggingEventHandlerDecorator(IEventHandler<TEvent> handler, ICorrelationIdFactory correlationIdFactory)
+        public LoggingEventHandlerDecorator(IEventHandler<TEvent> handler, ICorrelationIdFactory correlationIdFactory,
+            ILogger<IEventHandler<TEvent>> logger)
         {
             _handler = handler;
             _correlationIdFactory = correlationIdFactory;
+            _logger = logger;
         }
 
         public async Task HandleAsync(TEvent @event)
@@ -24,6 +29,7 @@ namespace Trill.Services.Stories.Infrastructure.Decorators
             var correlationId = _correlationIdFactory.Create();
             using (LogContext.PushProperty("CorrelationId", correlationId))
             {
+                _logger.LogInformation($"Handling an event: {@event.GetType().Name.Underscore()}");
                 await _handler.HandleAsync(@event);
             }
         }
