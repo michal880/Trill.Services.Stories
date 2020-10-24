@@ -71,6 +71,8 @@ namespace Trill.Services.Stories.Infrastructure
                 .AddTransient(ctx => ctx.GetRequiredService<IAppContextFactory>().Create())
                 .AddGrpc();
             
+            builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(MetricsCommandHandlerDecorator<>));
+            
             builder.Services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingCommandHandlerDecorator<>));
             builder.Services.TryDecorate(typeof(IEventHandler<>), typeof(LoggingEventHandlerDecorator<>));
             
